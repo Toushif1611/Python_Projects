@@ -451,8 +451,8 @@ while True:
 
     keys=pygame.key.get_pressed()
 
-    # ===== BOSS SCORE TRIGGER (MULTIPLES OF 200) =====
-    if score >= 200 and score % 200 == 0 and score != last_boss_score:
+    # ===== BOSS SCORE TRIGGER (MULTIPLES OF 100) =====
+    if score >= 100 and score % 100 == 0 and score != last_boss_score:
         last_boss_score = score
         boss_spawned = True
         boss_warning = 120
