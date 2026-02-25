@@ -26,6 +26,7 @@ player_speed = 5
 enemy_speed = 5
 reload_time = 2000
 MIN_DISTANCE = 280
+difficulty_scale = 1
 
 # -------------------- PLAYER --------------------
 player_pos = [150, 300]
@@ -118,6 +119,10 @@ def dodge():
         dy /= mag
 
     return dx, dy, threats
+
+def draw_health_bar(x, y, health, color):
+    pygame.draw.rect(screen, GRAY, (x, y, 200, 20))
+    pygame.draw.rect(screen, color, (x, y, 2*health, 20))
 
 # -------------------- GAME LOOP --------------------
 running = True
@@ -257,18 +262,23 @@ while running:
         enemy_reloading = False
 
     # ---------------- BULLETS ----------------
+    # ---------------- PLAYER BULLETS ----------------
     for b in player_bullets[:]:
         b.move()
+
         if b.rect.colliderect(
             pygame.Rect(enemy_pos[0]-ENEMY_RADIUS,
                         enemy_pos[1]-ENEMY_RADIUS,
                         ENEMY_RADIUS*2, ENEMY_RADIUS*2)):
             enemy_health -= 5
             player_bullets.remove(b)
-        elif check_wall_collision(b.rect):
-            player_bullets.remove(b)
-        b.draw()
 
+        elif check_wall_collision(b.rect) or not screen.get_rect().colliderect(b.rect):
+            player_bullets.remove(b)
+
+        else:
+            b.draw()
+    # ---------------- ENEMY BULLETS ----------------
     for b in enemy_bullets[:]:
         b.move()
         if b.rect.colliderect(
@@ -294,6 +304,9 @@ while running:
 
     # ---------------- GAME OVER ----------------
     if enemy_health <= 0:
+        difficulty_scale += 0.2
+        enemy_speed = 5 * difficulty_scale
+        enemy_fire_delay = max(150, int(400 / difficulty_scale))
         draw_text("YOU WIN!", RED, WIDTH//2-100, HEIGHT//2)
         pygame.display.update()
         pygame.time.delay(3000)

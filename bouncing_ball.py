@@ -1,55 +1,87 @@
 import turtle
 
-s=turtle.Screen()
-s.bgcolor("black")
-s.title("bouncing-ball")
-s.tracer(0)
+# -----------------------
+# Screen Setup
+# -----------------------
+screen = turtle.Screen()
+screen.bgcolor("black")
+screen.title("Smooth Bouncing Ball")
+screen.setup(700, 700)
+screen.tracer(0)
 
-b=turtle.Turtle()
-b.color("green")
-b.pensize(5)
-b.speed(0)
-b.penup()
-b.goto(-320,-320)
-b.pendown()
-for i in range(4):
-    b.forward(630)
-    b.left(90)
-    b.hideturtle()
+# -----------------------
+# Draw Border
+# -----------------------
+border = turtle.Turtle()
+border.hideturtle()
+border.color("green")
+border.pensize(5)
+border.penup()
+border.goto(-320, -320)
+border.pendown()
 
-a=turtle.Turtle("circle")
-a.color("green")
-a.speed(0)
-a.penup()
-a.goto(0, 200)
-a.dx = 2
-a.dy = 0
+for _ in range(4):
+    border.forward(640)
+    border.left(90)
 
-gravity = 0.1
+# -----------------------
+# Ball Setup
+# -----------------------
+ball = turtle.Turtle()
+ball.shape("circle")
+ball.color("green")
+ball.penup()
+ball.goto(0, 200)
+ball.speed(0)
 
-def turnleft():
-    a.left(30)
+ball.dx = 2
+ball.dy = 0
 
-def turnright():
-    a.right(30)
+gravity = 0.2
+bounce_strength = 0.9   # energy loss factor
 
-s.listen()
-s.onkeypress(turnleft,"Left")
-s.onkeypress(turnright,"Right")    
+# -----------------------
+# Controls
+# -----------------------
+def turn_left():
+    ball.left(30)
 
-while True:
-    s.update()
-    a.dy -= gravity
-    a.setx(a.xcor() + a.dx)
-    a.sety(a.ycor() + a.dy)
-    #check for a wall collision
-    if a.xcor() > 300 or a.xcor() < -300:
-        a.dx *=-1
-    #check for a bounce
-    if a.ycor()<-300:
-        a.dy *=-1
+def turn_right():
+    ball.right(30)
 
+screen.listen()
+screen.onkeypress(turn_left, "Left")
+screen.onkeypress(turn_right, "Right")
 
+# -----------------------
+# Game Loop (Smooth Version)
+# -----------------------
+def update():
+    # Apply gravity
+    ball.dy -= gravity
 
-s.mainloop()
+    # Move ball
+    ball.setx(ball.xcor() + ball.dx)
+    ball.sety(ball.ycor() + ball.dy)
 
+    # Wall collision (Left & Right)
+    if ball.xcor() > 310 or ball.xcor() < -310:
+        ball.dx *= -1
+
+    # Floor collision
+    if ball.ycor() < -310:
+        ball.sety(-310)
+        ball.dy *= -bounce_strength
+
+    # Ceiling collision
+    if ball.ycor() > 310:
+        ball.sety(310)
+        ball.dy *= -1
+
+    screen.update()
+    screen.ontimer(update, 16)  # ~60 FPS smooth animation
+
+# Start animation
+update()
+
+screen.mainloop()

@@ -1,5 +1,5 @@
 # Space Invader
-# by ToushfA_1611
+# by Toushif1611
 # multiple enemies
 
 import turtle

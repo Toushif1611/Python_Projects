@@ -1,5 +1,5 @@
 # Traffic light
-# by toushifA
+# by Toushif1611
 # create screen and boarder
 
 import turtle
