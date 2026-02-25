@@ -1034,5 +1034,3 @@ while True:
         game_over = True
   
     pygame.display.update()
-
-Mob.update()
