@@ -1,25 +1,31 @@
-# Turtle Run
-# by Toushif1611
-# Fixed & Clean Version
+# Turtle Run - Restart Version
+# by Toushif1611 (Updated)
 
 import turtle
-import math
 import random
 
 # -----------------------
-# VARIABLES
+# CONSTANTS
+# -----------------------
+WIDTH, HEIGHT = 700, 700
+BORDER = 290
+
+# -----------------------
+# GLOBAL VARIABLES
 # -----------------------
 score = 0
 level = 1
-BORDER = 290
+game_over = False
+food_dx = 2
+food_dy = 2
 
 # -----------------------
 # SCREEN SETUP
 # -----------------------
 screen = turtle.Screen()
-screen.setup(700, 700)
+screen.setup(WIDTH, HEIGHT)
 screen.bgcolor("black")
-screen.title("TURTLE-RUN")
+screen.title("TURTLE RUN")
 screen.tracer(0)
 
 # -----------------------
@@ -31,11 +37,9 @@ border_pen.pensize(3)
 border_pen.penup()
 border_pen.goto(-300, -300)
 border_pen.pendown()
-
 for _ in range(4):
     border_pen.forward(600)
     border_pen.left(90)
-
 border_pen.hideturtle()
 
 # -----------------------
@@ -46,6 +50,10 @@ player.shape("turtle")
 player.color("green")
 player.penup()
 player.speed(0)
+player.goto(0, 0)
+player.setheading(90)
+move_speed = 3
+rotate_speed = 4
 
 # -----------------------
 # FOOD
@@ -55,11 +63,11 @@ food.shape("circle")
 food.color("red")
 food.penup()
 food.speed(0)
-food.goto(random.randint(-BORDER, BORDER),
-          random.randint(-BORDER, BORDER))
 
-food_dx = 2
-food_dy = 2
+def respawn_food():
+    food.goto(random.randint(-BORDER, BORDER),
+              random.randint(-BORDER, BORDER))
+respawn_food()
 
 # -----------------------
 # SCORE DISPLAY
@@ -74,79 +82,105 @@ def update_score():
     pen.clear()
     pen.write(f"Score: {score}  Level: {level}",
               align="left",
-              font=("Courier", 20, "normal"))
+              font=("Courier", 18, "normal"))
 
 update_score()
 
 # -----------------------
-# FUNCTIONS
+# CONTROLS
 # -----------------------
 def turn_left():
-    player.left(30)
+    player.left(rotate_speed)
 
 def turn_right():
-    player.right(30)
+    player.right(rotate_speed)
 
-def move():
-    player.forward(20)
+def accelerate():
+    player.forward(move_speed)
 
-def isCollision(t1, t2):
-    return t1.distance(t2) < 20
-
-# Keyboard binding
 screen.listen()
 screen.onkeypress(turn_left, "Left")
 screen.onkeypress(turn_right, "Right")
-screen.onkeypress(move, "Up")
+screen.onkeypress(accelerate, "Up")
 
 # -----------------------
-# MAIN LOOP
+# RESTART FUNCTION
 # -----------------------
-win = False
+def restart_game():
+    global score, level, game_over, food_dx, food_dy
+    score = 0
+    level = 1
+    game_over = False
+    food_dx = 2
+    food_dy = 2
+    player.goto(0,0)
+    player.setheading(90)
+    respawn_food()
+    update_score()
+    pen.goto(-290,310)
+    game_loop()
 
-while True:
-    screen.update()
+# -----------------------
+# GAME LOOP
+# -----------------------
+def game_loop():
+    global score, level, food_dx, food_dy, game_over
 
-    # Player border restriction
-    x = player.xcor()
-    y = player.ycor()
+    if game_over:
+        return
 
+    # Continuous forward movement
+    player.forward(move_speed)
+
+    # Border restriction
+    x, y = player.xcor(), player.ycor()
     if x > BORDER: player.setx(BORDER)
     if x < -BORDER: player.setx(-BORDER)
     if y > BORDER: player.sety(BORDER)
     if y < -BORDER: player.sety(-BORDER)
 
     # Collision
-    if isCollision(player, food):
+    if player.distance(food) < 20:
         score += 1
-        food.goto(random.randint(-BORDER, BORDER),
-                  random.randint(-BORDER, BORDER))
-        update_score()
+        respawn_food()
 
-    # LEVEL SYSTEM (clean formula)
+    # Level system
     level = min(5, score // 10 + 1)
 
-    # Food movement speed increases by level
+    # Food movement
     if level >= 2:
         food.setx(food.xcor() + food_dx * level/2)
         food.sety(food.ycor() + food_dy * level/2)
-
-        # Proper bounce
         if food.xcor() > BORDER or food.xcor() < -BORDER:
             food_dx *= -1
         if food.ycor() > BORDER or food.ycor() < -BORDER:
             food_dy *= -1
 
-    # WIN CONDITION
+    update_score()
+
+    # Win condition
     if score >= 50:
-        win = True
-        break
+        game_over = True
+        pen.goto(0, 0)
+        pen.write("YOU WIN!", align="center",
+                  font=("Courier", 40, "bold"))
+
+        # Show restart instruction
+        pen.goto(0, -50)
+        pen.write("Press 'R' to Restart", align="center",
+                  font=("Courier", 20, "normal"))
+        return
+
+    screen.update()
+    screen.ontimer(game_loop, 16)  # ~60 FPS
 
 # -----------------------
-# WIN SCREEN
+# KEYBIND RESTART
 # -----------------------
-pen.goto(0, 0)
-pen.write("YOU WIN!", align="center",
-          font=("Courier", 50, "bold"))
+screen.onkeypress(restart_game, "r")
 
+# -----------------------
+# START GAME
+# -----------------------
+game_loop()
 screen.mainloop()
