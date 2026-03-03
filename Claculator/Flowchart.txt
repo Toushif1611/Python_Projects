@@ -1,0 +1,33 @@
+1. start the program
+2. define the name of the history file(e.g., "history.txt")
+3. loop forever (while true)
+    a. ask the user to enter a calculator (like 3 + 2)
+        or a command (history, clear, exit)
+    b. if user enter 'exit'
+        i. print a goodbye message
+        ii. breake the loop
+
+    c. if user enter 'history'
+        i. try to open the history file for rading
+        ii. if file exist and not empty print each line (calculation)
+        iii. if filedoesnot exist or is empty print "no history found!"
+        iv. continue to the next loop
+
+    d. if user enter "clear"
+        i. open the history and overwrite it with nothing(empty it)
+        ii. print "history cleared"
+        iii. continue to the next loop
+
+    e. otherwise (assume user entered a calculation)
+        i. try to parse the input to get the number and the operator(you can split the input by space e.g., "5 + 9")
+        ii. if input is not valid, print "invalid input" and continue
+        iii. perform the calculation using if/elif
+            - if +, add
+            - if _, substract
+            - if *, multiply
+            - if /, divide (and check for divide by zero)
+
+        iv. show the result to user
+        v. write the calculation and result to history file (e.g., "9 + 7 = 16")
+
+4. end the program
