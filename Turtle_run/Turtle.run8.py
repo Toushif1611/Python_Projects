@@ -52,8 +52,14 @@ player.penup()
 player.speed(0)
 player.goto(0, 0)
 player.setheading(90)
-move_speed = 3
+
+base_speed = 3             # nominal forward speed
 rotate_speed = 4
+
+# movement flags (for smooth input handling)
+turn_left_pressed = False
+turn_right_pressed = False
+accel_pressed = False
 
 # -----------------------
 # FOOD
@@ -87,27 +93,56 @@ def update_score():
 update_score()
 
 # -----------------------
-# CONTROLS
+# CONTROLS (smooth)
 # -----------------------
-def turn_left():
-    player.left(rotate_speed)
 
-def turn_right():
-    player.right(rotate_speed)
+def start_turn_left():
+    global turn_left_pressed
+    turn_left_pressed = True
 
-def accelerate():
-    player.forward(move_speed)
+def stop_turn_left():
+    global turn_left_pressed
+    turn_left_pressed = False
+
+def start_turn_right():
+    global turn_right_pressed
+    turn_right_pressed = True
+
+def stop_turn_right():
+    global turn_right_pressed
+    turn_right_pressed = False
+
+def start_accel():
+    global accel_pressed
+    accel_pressed = True
+
+def stop_accel():
+    global accel_pressed
+    accel_pressed = False
 
 screen.listen()
-screen.onkeypress(turn_left, "Left")
-screen.onkeypress(turn_right, "Right")
-screen.onkeypress(accelerate, "Up")
+# arrow keys set/clear flags
+screen.onkeypress(start_turn_left, "Left")
+screen.onkeyrelease(stop_turn_left, "Left")
+screen.onkeypress(start_turn_right, "Right")
+screen.onkeyrelease(stop_turn_right, "Right")
+# Up toggles faster forward motion
+screen.onkeypress(start_accel, "Up")
+screen.onkeyrelease(stop_accel, "Up")
 
 # -----------------------
 # RESTART FUNCTION
 # -----------------------
 def restart_game():
     global score, level, game_over, food_dx, food_dy
+
+    # only allow a restart when the game is over
+    if not game_over:
+        return
+
+    # clear any messages written by previous game
+    pen.clear()
+
     score = 0
     level = 1
     game_over = False
@@ -129,8 +164,15 @@ def game_loop():
     if game_over:
         return
 
-    # Continuous forward movement
-    player.forward(move_speed)
+    # Continuous forward movement (modify speed when accelerating)
+    curr_speed = base_speed * (2 if accel_pressed else 1)
+    player.forward(curr_speed)
+
+    # turning when keys held
+    if turn_left_pressed:
+        player.left(rotate_speed)
+    if turn_right_pressed:
+        player.right(rotate_speed)
 
     # Border restriction
     x, y = player.xcor(), player.ycor()
@@ -169,6 +211,9 @@ def game_loop():
         pen.goto(0, -50)
         pen.write("Press 'R' to Restart", align="center",
                   font=("Courier", 20, "normal"))
+
+        # force a screen update so messages appear immediately
+        screen.update()
         return
 
     screen.update()

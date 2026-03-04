@@ -57,6 +57,10 @@ player.goto(0, -250)
 
 player_speed = 20
 
+# flags for smooth movement
+move_left_pressed = False
+move_right_pressed = False
+
 def move_left():
     x = player.xcor() - player_speed
     if x < -280:
@@ -68,6 +72,28 @@ def move_right():
     if x > 280:
         x = 280
     player.setx(x)
+
+# handlers for key press/release
+
+def start_move_left():
+    global move_left_pressed
+    move_left_pressed = True
+
+
+def stop_move_left():
+    global move_left_pressed
+    move_left_pressed = False
+
+
+def start_move_right():
+    global move_right_pressed
+    move_right_pressed = True
+
+
+def stop_move_right():
+    global move_right_pressed
+    move_right_pressed = False
+
 
 # -----------------------
 # Enemies
@@ -135,15 +161,8 @@ for i in range(number_of_enemies):
 reset_enemies()
 
 # -----------------------
-# Bullet
+# (single bullet object removed since we now use multiple bullets)
 # -----------------------
-bullet = turtle.Turtle()
-bullet.shape("triangle")
-bullet.color("yellow")
-bullet.penup()
-bullet.setheading(90)
-bullet.shapesize(0.5, 0.5)
-bullet.hideturtle()
 
 # -----------------------
 # Multiple Bullets System
@@ -184,23 +203,33 @@ def show_game_over():
                         font=("Arial", 24, "bold"))
 
 # -----------------------
-# Keyboard Bindings
+# Keyboard Bindings (smooth movement)
 # -----------------------
 screen.listen()
-screen.onkeypress(move_left, "Left")
-screen.onkeypress(move_right, "Right")
+# pressing sets flag, releasing clears it
+screen.onkeypress(start_move_left, "Left")
+screen.onkeyrelease(stop_move_left, "Left")
+screen.onkeypress(start_move_right, "Right")
+screen.onkeyrelease(stop_move_right, "Right")
 screen.onkeypress(fire_bullet, "space")
 
 # -----------------------
 # Main Game Loop (Smooth)
 # -----------------------
 def game_loop():
-    global enemy_speed, bullet_state, score, game_over, level
+    # bullet_state not used anymore
+    global enemy_speed, score, game_over, level
 
     if game_over:
         return
 
     move_down = False
+
+    # Move player smoothly based on key state
+    if move_left_pressed:
+        move_left()
+    if move_right_pressed:
+        move_right()
 
     # Move enemies
     for enemy in enemies:
@@ -265,7 +294,9 @@ def game_loop():
         level += 1
         update_level()
         reset_enemies()
-        enemy.showturtle()
+        # make sure all enemies are visible again
+        for e in enemies:
+            e.showturtle()
 
     screen.update()
     screen.ontimer(game_loop, 16)
