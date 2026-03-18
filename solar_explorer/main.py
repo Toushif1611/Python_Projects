@@ -118,7 +118,7 @@ last_boss_score = 0
 anim_tick = 0
 
 # ================= STATE =================
-scene = "solar"
+scene = "menu"
 current_planet=None
 game_over=False
 taking_off=False
@@ -127,6 +127,9 @@ rapid_timer = 0
 boss_warning = 0
 switching_scene = False
 respawn_lock = False
+paused = False
+came_from_pause = False
+previous_scene = "solar"
 
 # ================= BULLETS =================
 bullets=[]
@@ -436,6 +439,24 @@ def hud(txt,y):
 
 land_key_lock = False
 
+def draw_button(text, x, y, w, h, color, hover_color):
+    mouse = pygame.mouse.get_pos()
+    click = pygame.mouse.get_pressed()
+
+    rect = pygame.Rect(x, y, w, h)
+
+    if rect.collidepoint(mouse):
+        pygame.draw.rect(screen, hover_color, rect)
+        if click[0]:
+            return True
+    else:
+        pygame.draw.rect(screen, color, rect)
+
+    label = font.render(text, True, WHITE)
+    screen.blit(label, (x + w//2 - label.get_width()//2, y + h//2 - label.get_height()//2))
+
+    return False
+
 # ================= LOOP =================
 while True:
     clock.tick(60)
@@ -447,7 +468,16 @@ while True:
         sound_exp_cd -= 1
 
     for e in pygame.event.get():
-        if e.type==pygame.QUIT: sys.exit()
+        if e.type == pygame.QUIT:
+            sys.exit()
+
+        if e.type == pygame.KEYDOWN:
+            if e.key == pygame.K_ESCAPE:
+                if scene in ["solar", "planet"]:
+                    previous_scene = scene
+                    paused = True
+                    came_from_pause = True
+                    scene = "menu"
 
     keys=pygame.key.get_pressed()
 
@@ -465,7 +495,7 @@ while True:
     if game_over:
         screen.fill(BLACK)
         screen.blit(big.render("GAME OVER",1,RED),(220,330))
-        screen.blit(font.render("Press R to Respawn",1,WHITE),(290,410))
+        screen.blit(font.render("Press R to Restart or M for Menu",1,WHITE),(250,410))
 
         if keys[pygame.K_r] and not respawn_lock:
             reset_game()
@@ -473,6 +503,10 @@ while True:
 
         if not keys[pygame.K_r]:
             respawn_lock = False
+
+        if keys[pygame.K_m]:
+            scene = "menu"
+            game_over = False
 
         pygame.display.update()
         continue
@@ -497,6 +531,46 @@ while True:
             taking_off = False
             launch_height = 0
             game_over = False
+
+        pygame.display.update()
+        continue
+
+    # ================= MENU =================
+    if scene == "menu":
+        screen.fill(BLACK)
+
+        title = big.render("SPACE GAME", True, WHITE)
+        screen.blit(title, (WIDTH//2 - title.get_width()//2, 200))
+
+        y_offset = 350
+
+        # ▶️ CONTINUE (only if paused)
+        if came_from_pause:
+            if draw_button("CONTINUE", 300, y_offset, 200, 60, (0,100,200), (0,150,255)):
+                paused = False
+                came_from_pause = False
+                scene = previous_scene   # or return to previous
+            y_offset += 80
+
+        # ▶️ PLAY
+        if draw_button("PLAY", 300, y_offset, 200, 60, (0,150,0), (0,200,0)):
+            reset_game()
+            paused = False
+            came_from_pause = False
+            scene = "solar"
+        y_offset += 80
+
+        # ❌ EXIT
+        if draw_button("EXIT", 300, y_offset, 200, 60, (150,0,0), (200,0,0)):
+            pygame.quit()
+            sys.exit()
+
+        pygame.display.update()
+        continue
+
+        if draw_button("EXIT", 300, 450, 200, 60, (150,0,0), (200,0,0)):
+            pygame.quit()
+            sys.exit()
 
         pygame.display.update()
         continue
