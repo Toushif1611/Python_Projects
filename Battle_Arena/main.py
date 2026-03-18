@@ -25,7 +25,6 @@ ENEMY_RADIUS = 15
 player_speed = 5
 enemy_speed = 5
 reload_time = 2000
-MIN_DISTANCE = 280  # unused constant (leftover)
 difficulty_scale = 1
 
 # -------------------- PLAYER --------------------
@@ -34,7 +33,7 @@ player_health = 100
 player_ammo = 10
 player_reloading = False
 player_reload_start = 0
-player_velocity = [0, 0]  # computed but not currently used
+player_velocity = [0, 0]  # used for enemy prediction
 
 # -------------------- ENEMY --------------------
 enemy_pos = [750, 300]
@@ -45,6 +44,7 @@ enemy_reload_start = 0
 enemy_state = "attack"
 enemy_last_shot = 0
 enemy_fire_delay = 400
+enemy_strafe_dir = 1
 
 # -------------------- WALLS --------------------
 walls = [
@@ -195,6 +195,7 @@ def reset_round(win=False):
     enemy_reload_start = 0
     enemy_state = "attack"
     enemy_last_shot = 0
+    
 
     # clear any projectiles from previous round
     player_bullets.clear()
@@ -232,7 +233,7 @@ while running:
     keys = pygame.key.get_pressed()
     old_x, old_y = player_pos
 
-    new_x, new_y = player_pos
+    new_x, new_y = player_pos[0], player_pos[1]
     if keys[pygame.K_w]: new_y -= player_speed
     if keys[pygame.K_s]: new_y += player_speed
     if keys[pygame.K_a]: new_x -= player_speed
@@ -251,8 +252,8 @@ while running:
     player_pos[0] = max(PLAYER_RADIUS, min(WIDTH-PLAYER_RADIUS, player_pos[0]))
     player_pos[1] = max(PLAYER_RADIUS, min(HEIGHT-PLAYER_RADIUS, player_pos[1]))
 
-    player_velocity[0] = player_pos[0] - old_x
-    player_velocity[1] = player_pos[1] - old_y
+    player_velocity[0] = (player_pos[0] - old_x) * 60
+    player_velocity[1] = (player_pos[1] - old_y) * 60
 
     # ---------------- ENEMY AI ----------------
     dx = player_pos[0] - enemy_pos[0]
@@ -268,18 +269,12 @@ while running:
     SAFE_DISTANCE = 220
     MAX_DISTANCE = 400
 
-    # Decide state
-    # always hide when out of ammo so we can reload
-    if enemy_ammo == 0:
+    if enemy_ammo == 0 or enemy_health < 30:
         enemy_state = "hide"
-    # low health causes retreat but not automatic reload
-    elif enemy_health < 30:
+    elif enemy_reloading and enemy_health < 50:
         enemy_state = "hide"
-    elif not enemy_reloading:
+    else:
         enemy_state = "attack"
-    # if currently reloading and health is low, remain hidden
-    if enemy_reloading and enemy_health < 50:
-        enemy_state = "hide"
 
     # ---------------- ATTACK MODE ----------------
     if enemy_state == "attack":
@@ -303,15 +298,15 @@ while running:
             perp_y = dx
             # randomly flip strafing direction every few frames to be less predictable
             if random.random() < 0.02:
-                perp_x *= -1
-                perp_y *= -1
-            move_x = perp_x * enemy_speed
-            move_y = perp_y * enemy_speed
+                enemy_strafe_dir *= -1
+
+            move_x = perp_x * enemy_speed * enemy_strafe_dir
+            move_y = perp_y * enemy_speed * enemy_strafe_dir
 
         # Apply dodge
         if threats > 0:
-            move_x += dodge_x * 4
-            move_y += dodge_y * 4
+            move_x = (move_x + dodge_x * 4) / 2
+            move_y = (move_y + dodge_y * 4) / 2
 
         move_enemy(move_x, move_y)
 
@@ -337,17 +332,25 @@ while running:
 
     # ---------------- HIDE MODE ----------------
     if enemy_state == "hide":
-        # when hiding, try to move toward nearest wall for cover
-        best_dx, best_dy = -dx, -dy  # default retreat away from player
-        # scan cardinal directions for closest wall distance
-        for wx, wy in [(1,0),(-1,0),(0,1),(0,-1)]:
-            test_rect = pygame.Rect(enemy_pos[0]+wx*20-ENEMY_RADIUS,
-                                    enemy_pos[1]+wy*20-ENEMY_RADIUS,
-                                    ENEMY_RADIUS*2, ENEMY_RADIUS*2)
-            if check_wall_collision(test_rect):
-                best_dx, best_dy = wx, wy
-                break
-        move_enemy(best_dx * enemy_speed, best_dy * enemy_speed)
+        best_wall = None
+        best_dist = float('inf')
+
+        for w in walls:
+            wall_dist = math.hypot(w.centerx - enemy_pos[0], w.centery - enemy_pos[1])
+            if wall_dist < best_dist:
+                best_dist = wall_dist
+                best_wall = w
+
+        if best_wall:
+            dx = best_wall.centerx - enemy_pos[0]
+            dy = best_wall.centery - enemy_pos[1]
+            mag = math.hypot(dx, dy)
+
+            if mag != 0:
+                dx /= mag
+                dy /= mag
+
+            move_enemy(dx * enemy_speed, dy * enemy_speed)
 
         # reload only if out of ammo
         if enemy_ammo == 0 and not enemy_reloading:
@@ -367,13 +370,14 @@ while running:
 
     # ---------------- BULLETS ----------------
     # ---------------- PLAYER BULLETS ----------------
+    enemy_rect = pygame.Rect(enemy_pos[0]-ENEMY_RADIUS,
+                            enemy_pos[1]-ENEMY_RADIUS,
+                            ENEMY_RADIUS*2, ENEMY_RADIUS*2)
+
     for b in player_bullets[:]:
         b.move()
 
-        hit_enemy = b.rect.colliderect(
-            pygame.Rect(enemy_pos[0]-ENEMY_RADIUS,
-                        enemy_pos[1]-ENEMY_RADIUS,
-                        ENEMY_RADIUS*2, ENEMY_RADIUS*2))
+        hit_enemy = b.rect.colliderect(enemy_rect)
         out_of_bounds = not screen.get_rect().colliderect(b.rect)
         hit_wall = check_wall_collision(b.rect)
 
@@ -387,12 +391,14 @@ while running:
 
         b.draw()
     # ---------------- ENEMY BULLETS ----------------
+    player_rect = pygame.Rect(player_pos[0]-PLAYER_RADIUS,
+                            player_pos[1]-PLAYER_RADIUS,
+                            PLAYER_RADIUS*2, PLAYER_RADIUS*2)
+
     for b in enemy_bullets[:]:
         b.move()
-        hit_player = b.rect.colliderect(
-            pygame.Rect(player_pos[0]-PLAYER_RADIUS,
-                        player_pos[1]-PLAYER_RADIUS,
-                        PLAYER_RADIUS*2, PLAYER_RADIUS*2))
+
+        hit_player = b.rect.colliderect(player_rect)
         out_of_bounds = not screen.get_rect().colliderect(b.rect)
         hit_wall = check_wall_collision(b.rect)
 
@@ -403,6 +409,7 @@ while running:
         elif hit_wall or out_of_bounds:
             enemy_bullets.remove(b)
             continue
+
         b.draw()
 
     # ---------------- DRAW ----------------
