@@ -1,4 +1,5 @@
 import pygame, math, random, sys, os
+import json 
 
 pygame.init()
 pygame.mixer.init()
@@ -100,6 +101,8 @@ lander_radius=10
 # ================= STATS =================
 health = 100
 score = 0
+HIGH_SCORE = 0  # NEW: Current high score
+high_scores = []  # NEW: Top 5 high scores list
 hit_timer = 0   # damage cooldown
 fuel = 100
 MAX_FUEL = 100
@@ -138,6 +141,41 @@ boss_shoot_timer = 0
 NORMAL_FIRE_DELAY = 8
 fire_delay = NORMAL_FIRE_DELAY
 fire_timer = 0 
+
+# NEW: High score functions
+def load_high_scores():
+    global high_scores, HIGH_SCORE
+    try:
+        if os.path.exists("highscores.json"):
+            with open("highscores.json", "r") as f:
+                data = json.load(f)
+                high_scores = data.get("scores", [])
+                HIGH_SCORE = data.get("high_score", 0)
+    except:
+        high_scores = []
+        HIGH_SCORE = 0
+
+def save_high_scores():
+    try:
+        data = {
+            "high_score": HIGH_SCORE,
+            "scores": high_scores[:5]  # Keep only top 5
+        }
+        with open("highscores.json", "w") as f:
+            json.dump(data, f)
+    except:
+        pass  # Silently fail if can't save
+
+def add_score(new_score):
+    global HIGH_SCORE, high_scores, score
+    if new_score > HIGH_SCORE:
+        HIGH_SCORE = new_score
+    high_scores.append({"score": new_score, "date": f"{pygame.time.get_ticks()//1000}"})
+    high_scores = sorted(high_scores, key=lambda x: x["score"], reverse=True)[:5]
+    save_high_scores()
+
+# Load high scores on startup
+load_high_scores()
 
 # ================= MOB =================
 class Mob:
@@ -355,6 +393,9 @@ def spawn_mobs(name):
 
 
 mobs=[]
+
+
+
 # ================= EXPLOSIONS =================
 explosions = []
 
@@ -385,6 +426,10 @@ def reset_game():
     global hit_timer, asteroid_hit_timer
     global land_key_lock, taking_off, launch_height
 
+    # ---- NEW: Check if current score beats high score ----
+    if score > 0:  # Only check if we played
+        add_score(score)
+
     # ---- stop looping sounds ----
     CH_THRUST.stop()
 
@@ -394,7 +439,7 @@ def reset_game():
     fuel = MAX_FUEL
     difficulty = 1
     boss_level = 1
-
+    
     # ---- positions ----
     ship_pos = pygame.Vector2(0, -200)
     ship_angle = -90
@@ -541,8 +586,19 @@ while True:
 
         title = big.render("SPACE GAME", True, WHITE)
         screen.blit(title, (WIDTH//2 - title.get_width()//2, 200))
+        # NEW: High Score Display
+        hs_text = big.render(f"HIGH SCORE: {HIGH_SCORE}", True, YELLOW)
+        screen.blit(hs_text, (WIDTH//2 - hs_text.get_width()//2, 100))
+        
+        top_scores = font.render("TOP 5 SCORES:", True, WHITE)
+        screen.blit(top_scores, (WIDTH//2 - top_scores.get_width()//2, 260))
 
-        y_offset = 350
+        # Display top 5 scores
+        for i, entry in enumerate(high_scores[:5]):
+            score_text = font.render(f"{i+1}. {entry['score']}", True, (200, 200, 255))
+            screen.blit(score_text, (WIDTH//2 - 80, 290 + i * 30))
+
+        y_offset = 450
 
         # ▶️ CONTINUE (only if paused)
         if came_from_pause:
@@ -897,6 +953,7 @@ while True:
         hud(f"Lander X:{int(lander_pos.x)} Y:{int(lander_pos.y)}",10)
         hud(f"Health: {health}",35)
         hud(f"Score: {score}",60)
+        hud(f"High Score: {HIGH_SCORE}", 85)
 
         if boss_alive:
             boss = next(m for m in mobs if m.is_boss)
@@ -1089,6 +1146,7 @@ while True:
     hud(f"Spacecraft X:{int(ship_pos.x)} Y:{int(ship_pos.y)}",10)
     hud(f"Health: {health}",35)
     hud(f"Score: {score}",60)
+    hud(f"High Score: {HIGH_SCORE}", 110)
     hud(f"Fuel: {int(fuel)}",85)
 
     # ---- explosions ----
