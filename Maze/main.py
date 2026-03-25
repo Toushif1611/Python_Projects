@@ -2,6 +2,8 @@ import pygame
 import sys
 import random
 import asyncio
+import json
+import os
 
 pygame.init()
 
@@ -12,14 +14,18 @@ BLACK = (0, 0, 0)
 BLUE  = (50, 150, 255)
 GREEN = (0, 255, 0)
 RED   = (200, 0, 0)
+YELLOW = (255, 255, 0)
+ORANGE = (255, 165, 0)
 
 FPS = 60
 MAX_MAZE_SIZE = 41
 
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Maze Game")
+pygame.mixer.init()  # For potential sound effects later
 
 font = pygame.font.Font(None, 30)
+big_font = pygame.font.Font(None, 50)
 
 # ------------------ MAZE GENERATOR ------------------
 def create_level(level):
@@ -66,7 +72,6 @@ def create_level(level):
 
     return maze, rows, cols, cell_size, goal_r, goal_c
 
-
 # ------------------ PLAYER CLASS ------------------
 class Player:
     def __init__(self, cell_size, speed):
@@ -103,30 +108,35 @@ class Player:
 
     def draw(self, surface):
         pygame.draw.rect(surface, BLUE,
-                         (self.x, self.y,
-                          self.cell_size, self.cell_size))
+                        (self.x, self.y,
+                         self.cell_size, self.cell_size))
 
-
-# ------------------ GAME ------------------
+# ------------------ GAME INIT ------------------
 level = 1
 maze, ROWS, COLS, CELL_SIZE, goal_row, goal_col = create_level(level)
 player = Player(CELL_SIZE, 4 + level)
 
-
 async def main():
     global level, maze, ROWS, COLS, CELL_SIZE
-    global goal_row, goal_col, player
+    global goal_row, goal_col, player, game_over, new_high_score
 
+    clock = pygame.time.Clock()
     running = True
 
     while running:
-
-        screen.fill(WHITE)   # ALWAYS FIRST DRAW CALL
-        pygame.draw.circle(screen, (255,0,0), (100,100), 50)
+        screen.fill(WHITE)
+        
         # ------------------ EVENTS ------------------
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
+            
+            if event.type == pygame.KEYDOWN:
+                if game_over:
+                    if event.key == pygame.K_r:  # Restart
+                        reset_game()
+                    elif event.key == pygame.K_m:  # Menu/Quit
+                        running = False
 
         keys = pygame.key.get_pressed()
 
@@ -162,7 +172,6 @@ async def main():
 
             level += 1
             maze, ROWS, COLS, CELL_SIZE, goal_row, goal_col = create_level(level)
-
             player = Player(CELL_SIZE, min(4 + level, 12))
 
         # ------------------ DRAW MAZE ------------------
@@ -170,30 +179,29 @@ async def main():
             for c in range(COLS):
                 color = WHITE if maze[r][c] == 0 else BLACK
                 pygame.draw.rect(screen, color,
-                                 (c * CELL_SIZE, r * CELL_SIZE,
-                                  CELL_SIZE, CELL_SIZE))
+                               (c * CELL_SIZE, r * CELL_SIZE,
+                                CELL_SIZE, CELL_SIZE))
 
         # Goal
         pygame.draw.rect(screen, GREEN,
-                         (goal_col * CELL_SIZE,
-                          goal_row * CELL_SIZE,
-                          CELL_SIZE, CELL_SIZE))
+                        (goal_col * CELL_SIZE,
+                         goal_row * CELL_SIZE,
+                         CELL_SIZE, CELL_SIZE))
 
         # Player
         player.draw(screen)
 
-        # Level text
+        # ------------------ HUD ------------------
         level_text = font.render(f"Level: {level}", True, RED)
         screen.blit(level_text, (10, 10))
-        
+
         pygame.display.flip()
+        clock.tick(FPS)
         await asyncio.sleep(0)
 
     pygame.quit()
 
-
 # ------------------ RUN ------------------
-
 if sys.platform == "emscripten":
     asyncio.ensure_future(main())
 else:
