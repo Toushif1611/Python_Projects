@@ -1,4 +1,4 @@
-# 1- import the random module
+# 1- import the random moduley
 import random
 
 # 2- create subjects
