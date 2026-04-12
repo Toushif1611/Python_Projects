@@ -231,28 +231,15 @@ while running:
 
     # -------------------- PLAYER MOVE --------------------
     old_x, old_y = player["pos"][0], player["pos"][1]
-    new_x, new_y = player["pos"][0], player["pos"][1]
 
+    dx = dy = 0
     keys = pygame.key.get_pressed()
-    if keys[pygame.K_w]: new_y -= PLAYER_SPEED
-    if keys[pygame.K_s]: new_y += PLAYER_SPEED
-    if keys[pygame.K_a]: new_x -= PLAYER_SPEED
-    if keys[pygame.K_d]: new_x += PLAYER_SPEED
+    if keys[pygame.K_w]: dy -= PLAYER_SPEED
+    if keys[pygame.K_s]: dy += PLAYER_SPEED
+    if keys[pygame.K_a]: dx -= PLAYER_SPEED
+    if keys[pygame.K_d]: dx += PLAYER_SPEED
 
-    # Apply movement with wall collision
-    test_rect = pygame.Rect(new_x - PLAYER_RADIUS, player["pos"][1] - PLAYER_RADIUS,
-                            2*PLAYER_RADIUS, 2*PLAYER_RADIUS)
-    if not check_wall_collision(test_rect):
-        player["pos"][0] = new_x
-
-    test_rect = pygame.Rect(player["pos"][0] - PLAYER_RADIUS, new_y - PLAYER_RADIUS,
-                            2*PLAYER_RADIUS, 2*PLAYER_RADIUS)
-    if not check_wall_collision(test_rect):
-        player["pos"][1] = new_y
-
-    # Clamp player to screen
-    player["pos"][0] = max(PLAYER_RADIUS, min(WIDTH - PLAYER_RADIUS, player["pos"][0]))
-    player["pos"][1] = max(PLAYER_RADIUS, min(HEIGHT - PLAYER_RADIUS, player["pos"][1]))
+    move_entity(player["pos"], dx, dy, PLAYER_RADIUS)
 
     # Update player velocity (approx. pixels per second)
     player["vel"][0] = (player["pos"][0] - old_x) * 60
