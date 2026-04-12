@@ -482,6 +482,53 @@ def world(pos):
 def hud(txt,y):
     screen.blit(font.render(txt,1,WHITE),(10,y))
 
+# ================= MINIMAP =================
+def draw_minimap():
+    """Draw minimap in top-right corner showing solar system"""
+    minimap_size = 150
+    minimap_x = WIDTH - minimap_size - 10
+    minimap_y = 10
+    minimap_scale = 0.15  # Scale for minimap (ships are very small at real scale)
+    
+    # Draw minimap background
+    pygame.draw.rect(screen, (30, 30, 30), (minimap_x, minimap_y, minimap_size, minimap_size))
+    pygame.draw.rect(screen, WHITE, (minimap_x, minimap_y, minimap_size, minimap_size), 2)
+    
+    # Draw sun at center
+    sun_pos = (minimap_x + minimap_size // 2, minimap_y + minimap_size // 2)
+    pygame.draw.circle(screen, YELLOW, sun_pos, 3)
+    
+    # Draw orbits and planets
+    for i, p in enumerate(planets):
+        name, col, orbit, size, spd, grav = p
+        # Calculate planet position on orbit
+        planet_pos = pygame.Vector2(orbit * math.cos(angles[i]), orbit * math.sin(angles[i]))
+        
+        # Scale to minimap
+        minimap_planet_x = sun_pos[0] + planet_pos.x * minimap_scale
+        minimap_planet_y = sun_pos[1] + planet_pos.y * minimap_scale
+        
+        # Draw orbit line
+        pygame.draw.circle(screen, (100, 100, 100), sun_pos, int(orbit * minimap_scale), 1)
+        
+        # Draw planet
+        pygame.draw.circle(screen, col, (int(minimap_planet_x), int(minimap_planet_y)), max(1, int(size * minimap_scale / 10)))
+    
+    # Draw ship position
+    ship_minimap_x = sun_pos[0] + ship_pos.x * minimap_scale
+    ship_minimap_y = sun_pos[1] + ship_pos.y * minimap_scale
+    
+    # Clamp to minimap bounds
+    ship_minimap_x = max(minimap_x + 2, min(minimap_x + minimap_size - 2, ship_minimap_x))
+    ship_minimap_y = max(minimap_y + 2, min(minimap_y + minimap_size - 2, ship_minimap_y))
+    
+    pygame.draw.circle(screen, WHITE, (int(ship_minimap_x), int(ship_minimap_y)), 2)
+    pygame.draw.polygon(screen, WHITE, [
+        (int(ship_minimap_x), int(ship_minimap_y - 3)),
+        (int(ship_minimap_x + 2), int(ship_minimap_y + 2)),
+        (int(ship_minimap_x - 2), int(ship_minimap_y + 2))
+    ])
+
 land_key_lock = False
 
 def draw_button(text, x, y, w, h, color, hover_color):
@@ -1005,6 +1052,9 @@ while True:
             land_key_lock = False
             boss_level += 1
 
+        # ---- Draw minimap ----
+        draw_minimap()
+        
         pygame.display.update()
         continue
 
@@ -1165,4 +1215,7 @@ while True:
     if health <= 0:
         game_over = True
   
+    # ---- Draw minimap ----
+    draw_minimap()
+    
     pygame.display.update()
