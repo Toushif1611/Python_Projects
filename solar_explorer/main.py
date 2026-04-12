@@ -484,50 +484,94 @@ def hud(txt,y):
 
 # ================= MINIMAP =================
 def draw_minimap():
-    """Draw minimap in top-right corner showing solar system"""
+    """Draw minimap in top-right corner"""
     minimap_size = 150
     minimap_x = WIDTH - minimap_size - 10
     minimap_y = 10
-    minimap_scale = 0.15  # Scale for minimap (ships are very small at real scale)
     
     # Draw minimap background
     pygame.draw.rect(screen, (30, 30, 30), (minimap_x, minimap_y, minimap_size, minimap_size))
     pygame.draw.rect(screen, WHITE, (minimap_x, minimap_y, minimap_size, minimap_size), 2)
     
-    # Draw sun at center
-    sun_pos = (minimap_x + minimap_size // 2, minimap_y + minimap_size // 2)
-    pygame.draw.circle(screen, YELLOW, sun_pos, 3)
-    
-    # Draw orbits and planets
-    for i, p in enumerate(planets):
-        name, col, orbit, size, spd, grav = p
-        # Calculate planet position on orbit
-        planet_pos = pygame.Vector2(orbit * math.cos(angles[i]), orbit * math.sin(angles[i]))
+    if scene == "planet":
+        # Planet minimap: show lander and enemies
+        planet_minimap_scale = 0.05  # Scale for planet view
+        center_x = minimap_x + minimap_size // 2
+        center_y = minimap_y + minimap_size // 2
         
-        # Scale to minimap
-        minimap_planet_x = sun_pos[0] + planet_pos.x * minimap_scale
-        minimap_planet_y = sun_pos[1] + planet_pos.y * minimap_scale
+        # Draw lander at center
+        pygame.draw.circle(screen, WHITE, (center_x, center_y), 3)
+        pygame.draw.polygon(screen, WHITE, [
+            (center_x, center_y - 4),
+            (center_x + 3, center_y + 3),
+            (center_x - 3, center_y + 3)
+        ])
         
-        # Draw orbit line
-        pygame.draw.circle(screen, (100, 100, 100), sun_pos, int(orbit * minimap_scale), 1)
+        # Draw mobs relative to lander
+        for m in mobs:
+            if not m.dead:
+                rel_x = (m.pos.x - lander_pos.x) * planet_minimap_scale
+                rel_y = (m.pos.y - lander_pos.y) * planet_minimap_scale
+                
+                mob_x = center_x + rel_x
+                mob_y = center_y + rel_y
+                
+                # Clamp to minimap bounds
+                if minimap_x + 5 <= mob_x <= minimap_x + minimap_size - 5 and \
+                   minimap_y + 5 <= mob_y <= minimap_y + minimap_size - 5:
+                    color = RED if m.is_boss else YELLOW
+                    pygame.draw.circle(screen, color, (int(mob_x), int(mob_y)), 2)
         
-        # Draw planet
-        pygame.draw.circle(screen, col, (int(minimap_planet_x), int(minimap_planet_y)), max(1, int(size * minimap_scale / 10)))
+        # Draw powerups
+        for pu in planet_powerups:
+            rel_x = (pu["pos"].x - lander_pos.x) * planet_minimap_scale
+            rel_y = (pu["pos"].y - lander_pos.y) * planet_minimap_scale
+            
+            pu_x = center_x + rel_x
+            pu_y = center_y + rel_y
+            
+            if minimap_x + 5 <= pu_x <= minimap_x + minimap_size - 5 and \
+               minimap_y + 5 <= pu_y <= minimap_y + minimap_size - 5:
+                pygame.draw.circle(screen, (0,255,255), (int(pu_x), int(pu_y)), 1)
     
-    # Draw ship position
-    ship_minimap_x = sun_pos[0] + ship_pos.x * minimap_scale
-    ship_minimap_y = sun_pos[1] + ship_pos.y * minimap_scale
-    
-    # Clamp to minimap bounds
-    ship_minimap_x = max(minimap_x + 2, min(minimap_x + minimap_size - 2, ship_minimap_x))
-    ship_minimap_y = max(minimap_y + 2, min(minimap_y + minimap_size - 2, ship_minimap_y))
-    
-    pygame.draw.circle(screen, WHITE, (int(ship_minimap_x), int(ship_minimap_y)), 2)
-    pygame.draw.polygon(screen, WHITE, [
-        (int(ship_minimap_x), int(ship_minimap_y - 3)),
-        (int(ship_minimap_x + 2), int(ship_minimap_y + 2)),
-        (int(ship_minimap_x - 2), int(ship_minimap_y + 2))
-    ])
+    else:
+        # Solar system minimap
+        minimap_scale = 0.15  # Scale for minimap (ships are very small at real scale)
+        
+        # Draw sun at center
+        sun_pos = (minimap_x + minimap_size // 2, minimap_y + minimap_size // 2)
+        pygame.draw.circle(screen, YELLOW, sun_pos, 3)
+        
+        # Draw orbits and planets
+        for i, p in enumerate(planets):
+            name, col, orbit, size, spd, grav = p
+            # Calculate planet position on orbit
+            planet_pos = pygame.Vector2(orbit * math.cos(angles[i]), orbit * math.sin(angles[i]))
+            
+            # Scale to minimap
+            minimap_planet_x = sun_pos[0] + planet_pos.x * minimap_scale
+            minimap_planet_y = sun_pos[1] + planet_pos.y * minimap_scale
+            
+            # Draw orbit line
+            pygame.draw.circle(screen, (100, 100, 100), sun_pos, int(orbit * minimap_scale), 1)
+            
+            # Draw planet
+            pygame.draw.circle(screen, col, (int(minimap_planet_x), int(minimap_planet_y)), max(1, int(size * minimap_scale / 10)))
+        
+        # Draw ship position
+        ship_minimap_x = sun_pos[0] + ship_pos.x * minimap_scale
+        ship_minimap_y = sun_pos[1] + ship_pos.y * minimap_scale
+        
+        # Clamp to minimap bounds
+        ship_minimap_x = max(minimap_x + 2, min(minimap_x + minimap_size - 2, ship_minimap_x))
+        ship_minimap_y = max(minimap_y + 2, min(minimap_y + minimap_size - 2, ship_minimap_y))
+        
+        pygame.draw.circle(screen, WHITE, (int(ship_minimap_x), int(ship_minimap_y)), 2)
+        pygame.draw.polygon(screen, WHITE, [
+            (int(ship_minimap_x), int(ship_minimap_y - 3)),
+            (int(ship_minimap_x + 2), int(ship_minimap_y + 2)),
+            (int(ship_minimap_x - 2), int(ship_minimap_y + 2))
+        ])
 
 land_key_lock = False
 
@@ -1021,6 +1065,9 @@ while True:
             screen.blit(text, (150 + shake, 350))
             boss_warning -= 1
         
+        # ---- Draw minimap ----
+        draw_minimap()
+        
         # ======== FIREWORKS & VICTORY TEXT ========
         if boss_defeated_timer > 0:
             boss_defeated_timer -= 1
@@ -1051,9 +1098,6 @@ while True:
             boss_fought = False
             land_key_lock = False
             boss_level += 1
-
-        # ---- Draw minimap ----
-        draw_minimap()
         
         pygame.display.update()
         continue
