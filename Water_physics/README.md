@@ -1,4 +1,6 @@
-# Water Physics Simulation
+# Particle Physics Simulation
+
+## water Simulation Variant
 
 A simple Pygame-based simulation of water molecules in a draggable container, demonstrating basic particle physics with gravity, collisions, and flow.
 
