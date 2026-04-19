@@ -85,12 +85,18 @@ def game_loop():
                     y_change = BLOCK_SIZE
                     x_change = 0
 
-        # Boundary check
-        if x >= WIDTH or x < 0 or y >= HEIGHT or y < 0:
-            game_close = True
-
         x += x_change
         y += y_change
+
+        # Wrap around screen
+        if x >= WIDTH:
+            x = 0
+        elif x < 0:
+            x = WIDTH - BLOCK_SIZE
+        if y >= HEIGHT:
+            y = 0
+        elif y < 0:
+            y = HEIGHT - BLOCK_SIZE
 
         screen.fill(BLACK)
         draw_food([food_x, food_y])
