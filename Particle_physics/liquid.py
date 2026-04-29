@@ -25,7 +25,7 @@ box_offset_x, box_offset_y = 0, 0
 
 # Properties
 properties = {
-    "particle_count": 100,
+    "particle_count": 0,
     "radius": 4,
     "mass": 1.0,
     "gravity": 0.10,
@@ -180,45 +180,52 @@ def draw_ui():
 
     for i, name in enumerate(property_names):
         color = YELLOW if i == selected_property else WHITE
-        value = properties[name]
+        value = len(molecules) if name == "particle_count" else properties[name]
         text = f"{name}: {value:.3f}" if isinstance(value, float) else f"{name}: {value}"
         screen.blit(font.render(text, True, color), (panel_x, panel_y + 40 + i * 28))
 
 def adjust_property(name, delta):
     if name == "particle_count":
-        new_count = max(10, min(500, properties[name] + delta * 10))
-        if new_count != properties[name]:
-            properties[name] = new_count
-            current_count = len(molecules)
-            if new_count > current_count:
-                for _ in range(new_count - current_count):
-                    molecules.append(create_molecule())
-            elif new_count < current_count:
-                del molecules[new_count:]
+        target = max(0, min(500, len(molecules) + delta * 10))
+        current = len(molecules)
+
+        if target > current:
+            for _ in range(target - current):
+                molecules.append(create_molecule())
+        elif target < current:
+            del molecules[target:]
     elif name == "radius":
         properties[name] = max(2, min(12, properties[name] + int(delta)))
     elif name == "mass":
         properties[name] += delta * 0.1
+        properties[name] = max(0.1, min(10.0, properties[name]))
     elif name == "gravity":
         properties[name] += delta * 0.01
+        properties[name] = max(0.00, min(1.0, properties[name]))
     elif name == "bounce":
         properties[name] += delta * 0.05
+        properties[name] = max(0.00, min(0.95, properties[name]))
     elif name == "drag":
         properties[name] += delta * 0.005
+        properties[name] = max(0.00, min(0.99, properties[name]))
     elif name == "jitter":
         properties[name] += delta * 0.01
+        properties[name] = max(0.00, min(0.1, properties[name]))
     elif name == "flow_force":
         properties[name] += delta * 0.002
+        properties[name] = max(0.000, min(0.05, properties[name]))
     elif name == "viscosity":
         properties[name] += delta * 0.01
+        properties[name] = max(0.00, min(0.5, properties[name]))
     elif name == "surface_tension":
         properties[name] += delta * 0.005
+        properties[name] = max(0.000, min(0.1, properties[name]))
 
     sync_molecule_properties()
 
 def reset_properties():
     properties.update({
-        "particle_count": 100,
+        "particle_count": 0,
         "radius": 4,
         "mass": 1.0,
         "gravity": 0.10,
